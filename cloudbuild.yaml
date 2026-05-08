@@ -1,0 +1,31 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - "-t"
+      # $SHORT_SHA is empty for `gcloud builds submit` from local source.
+      - "asia-south1-docker.pkg.dev/$PROJECT_ID/travel-planner/travel-planner-web:$BUILD_ID"
+      - "."
+
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - "asia-south1-docker.pkg.dev/$PROJECT_ID/travel-planner/travel-planner-web:$BUILD_ID"
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - "${_SERVICE}"
+      - "--image=asia-south1-docker.pkg.dev/$PROJECT_ID/travel-planner/travel-planner-web:$BUILD_ID"
+      - "--region=${_REGION}"
+      - "--platform=managed"
+      - "--allow-unauthenticated"
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: travel-planner-web
+
+options:
+  logging: CLOUD_LOGGING_ONLY
