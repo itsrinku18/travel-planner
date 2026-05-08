@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:travel_planner/core/design/app_radii.dart';
 import 'package:travel_planner/features/travel_engine/domain/entities/trip.dart';
 import 'package:travel_planner/features/travel_engine/presentation/bloc/trips_cubit.dart';
 import 'package:travel_planner/features/travel_engine/presentation/bloc/trips_state.dart';
 import 'package:travel_planner/features/travel_engine/presentation/pages/trip_details_page.dart';
+import 'package:travel_planner/features/travel_engine/presentation/sheets/create_trip_sheet.dart';
 
 class PlannerPage extends StatelessWidget {
   const PlannerPage({super.key});
@@ -23,7 +25,7 @@ class PlannerPage extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateTripDialog(context),
+        onPressed: () => showCreateTripSheet(context),
         icon: const Icon(Icons.add),
         label: const Text('New trip'),
       ),
@@ -33,30 +35,7 @@ class PlannerPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (state.trips.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'No trips yet',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Create your first trip and start building an itinerary.',
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: () => _showCreateTripDialog(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create trip'),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _PlannerEmpty(onCreate: () => showCreateTripSheet(context));
           }
 
           return RefreshIndicator(
@@ -72,82 +51,57 @@ class PlannerPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Future<void> _showCreateTripDialog(BuildContext context) async {
-    final destinationCtrl = TextEditingController();
-    DateTimeRange? range;
+class _PlannerEmpty extends StatelessWidget {
+  const _PlannerEmpty({required this.onCreate});
+  final VoidCallback onCreate;
 
-    final created = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Create trip'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: destinationCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Destination',
-                    hintText: 'e.g. Goa, Paris, Tokyo',
-                  ),
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Dates'),
-                  subtitle: Text(
-                    range == null
-                        ? 'Pick start and end date'
-                        : _formatRange(range!),
-                  ),
-                  trailing: const Icon(Icons.date_range_outlined),
-                  onTap: () async {
-                    final now = DateTime.now();
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      firstDate: DateTime(now.year - 1),
-                      lastDate: DateTime(now.year + 5),
-                      initialDateRange: range,
-                    );
-                    if (picked != null) {
-                      range = picked;
-                      (context as Element).markNeedsBuild();
-                    }
-                  },
-                ),
-              ],
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.flight_takeoff,
+                color: cs.onPrimaryContainer,
+                size: 36,
+              ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  if (range == null) return;
-                  Navigator.pop(context, true);
-                },
-                child: const Text('Create'),
-              ),
-            ],
-          ),
+            const SizedBox(height: 14),
+            Text(
+              'Plan your first adventure',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Pick a destination, set your dates and start building an itinerary.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Create trip'),
+            ),
+          ],
+        ),
+      ),
     );
-
-    if (created != true) return;
-    if (range == null) return;
-    if (!context.mounted) return;
-    await context.read<TripsCubit>().create(
-      destination: destinationCtrl.text,
-      startDate: range!.start,
-      endDate: range!.end,
-    );
-  }
-
-  static String _formatRange(DateTimeRange r) {
-    final fmt = DateFormat('d MMM yyyy');
-    return '${fmt.format(r.start)} → ${fmt.format(r.end)}';
   }
 }
 
@@ -157,13 +111,14 @@ class _TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final fmt = DateFormat('d MMM');
     final dateStr =
         '${fmt.format(trip.startDate)} → ${fmt.format(trip.endDate)}';
 
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.r20),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => TripDetailsPage(tripId: trip.id)),
@@ -174,16 +129,13 @@ class _TripCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(AppRadii.r16),
                 ),
-                child: Icon(
-                  Icons.flight_takeoff,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
+                child: Icon(Icons.flight_takeoff, color: cs.onPrimaryContainer),
               ),
               const SizedBox(width: 12),
               Expanded(

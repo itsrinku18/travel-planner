@@ -1,0 +1,32 @@
+# Build artefacts that are regenerated inside the image
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Dev tooling / IDE
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Native projects (we only build for web)
+android/
+ios/
+linux/
+macos/
+windows/
+
+# Tests aren't needed for the web image
+test/
+
+# VCS / docs
+.git/
+.gitignore
+README*.md
+
+# Local Flutter cache
+.pub-cache/
